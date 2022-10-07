@@ -15,6 +15,6 @@ class PointDatabase:
         Return - List of 2 tuples
         q - a 2 tuple, d - l_inf distance
         """
-        i,j = self.binary_search(self.x_sort, q)
+        i,j = self.binary_search(self.x_sort, q)    
 
 c = PointDatabase([(1,2),(3,4),(0,2),(2,7),(2,5)])
