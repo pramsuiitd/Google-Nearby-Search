@@ -52,8 +52,9 @@ class PointDatabase:
         # c.printNode()
         return c
 
-    def searchRange(self, l, r, arr):
+    def searchRange(self, range, arr):
         # Sanity check
+        l,r = range[0],range[1]
         if(arr[0][1] > r):
             return (-1,-1)
         if(arr[len(arr)-1][1] < l):
@@ -117,18 +118,41 @@ class PointDatabase:
             j = j + 1
         return arr3
 
+    def searchNearbyHelper(self,rX,rY,ptr: Node):
+        if ptr._is_leaf:
+            # Guard method to avoid nested if-else
+            if ptr._val[0] < rX[0] or ptr._val[0] > rX[1]:
+                return
+            if ptr._val[1] < rY[0] or ptr._val[1] > rY[1]:
+                return
+            self._answer.append(ptr._val)
+            return
 
-    def searchNearbyHelper(self,rX,rY,ptr):
+        # Completly outside
+        if ptr._x_range[1] < rX[0] or ptr._x_range[0] > rX[1]:
+            return
         
-        pass
+        # Completly inside
+        if ptr._x_range[0] >= rX[0] and ptr._x_range[1] <= rX[1]:
+            l,r = self.searchRange(rY,ptr._y_sort)
+            for i in range(l,r+1):
+                self._answer.append(ptr._y_sort[i])
+            return
+
+        # Intersection 
+        self.searchNearbyHelper(rX,rY,ptr._left)
+        self.searchNearbyHelper(rX, rY, ptr._right)
+        return
 
     def searchNearby(self, q, d):
         """
         Return - List of 2 tuples
         q - a 2 tuple, d - l_inf distance
         """
-        search_range_x = (q[0]-d, q[0]-d)
-        search_range_y = (q[1]-d, q[1]-d)
+        if self._range_tree == None:
+            return []
+        search_range_x = (q[0]-d, q[0]+d)
+        search_range_y = (q[1]-d, q[1]+d)
         self._answer = []
         self.searchNearbyHelper(search_range_x,search_range_y,self._range_tree)
         return self._answer
@@ -139,12 +163,17 @@ if __name__ == '__main__':
     c = PointDatabase([(1,1),(3,3),(0,0),(4,4),(2,2)])
     # print(c.searchRange(5,9,[(1,2),(3,3),(0,4),(2,5),(2,7)]))
     # print(c.merge_list([(1,5),(6,6),(3,7)],[(1,2),(3,3),(0,4),(2,5),(2,7)]))
-    d = PointDatabase([])
-    x = c._range_tree
-    print(x._val,x._x_range,";", x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
-    x = x._left
-    print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
-    x = x._left
-    print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
-    x = c._range_tree._right
-    print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
+    d = PointDatabase([(1,5)])
+    print(d.searchNearby((2,4),0.6))
+    # x = c._range_tree
+    # print(x._val,x._x_range,";", x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
+    # x = x._left
+    # print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
+    # x = x._left
+    # print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
+    # x = c._range_tree._right
+    # print(x._left._val,x._left._x_range,";",x._right._val, x._right._x_range)
+    pointDbObject = PointDatabase([(1,6), (2,4), (3,7), (4,9), (5,1), (6,3), (7,8), (8,10), (9,2), (10,5)])
+    print(pointDbObject.searchNearby((5,5), 1))
+    print(pointDbObject.searchNearby((4,8), 2))
+    print(pointDbObject.searchNearby((10,2), 1.5))
