@@ -1,96 +1,55 @@
 """
-Idea ->
-Create a x-range tree, how so ever
+Create a x-range tree
 Then at every point store a sorted array -> in y(By merging bottom down), as well as the faster lookup array
 Now create a faster lookup binary search at each of the locations
 """
 class Node:
     def __init__(self, val, is_leaf, x_range) -> None:
-        self._is_leaf = is_leaf
-        self._val = val
-        self._left = None
-        self._right = None
-        self._y_sort = None
-        self._y_execution_list = None #This is smaller (n)^1/2 list
-        self._x_range = x_range
+        self._is_leaf, self._val, self._x_range = is_leaf, val, x_range
+        self._left, self._right, self._y_sort = None, None, None
         
     def printNode(self):
-        print(self._val)
-        print(self._y_sort)
-        print(self._x_range)
-        if not self._is_leaf:
-            print(self._left._val)
-            print(self._right._val)
+        print(self._val, self._y_sort, self._x_range)
+        if not self._is_leaf: print(self._left._val, self._right._val)
 
 class PointDatabase:
     def __init__(self, pointlist):
-        """
-        pointlist - list of 2 tuples, size n
-        Time complexity - O(nlogn)
-        """
-        self.sorted_x_list = sorted(pointlist, key = lambda x : x[0])
-        self.sorted_y_list = sorted(pointlist, key = lambda x : x[1])
+        self.sorted_x_list = sorted(pointlist)
         self._range_tree = self.BuildXTree(0,len(self.sorted_x_list)-1)
         self._answer = []
 
     def BuildXTree(self, l, r):
-        # Terminating Condition
-        if l == r:
+        if l == r: # Terminating Condition
             val = self.sorted_x_list[l]
-            c = Node(val,True, (val[0],val[0]))
-            c._y_sort = [self.sorted_x_list[l]]
-            # c.printNode()
+            c = Node(val,True,(val[0],val[0]))
+            c._y_sort = [val]
             return c
 
-        if l > r : return
+        if l > r : return # Safe Check
 
         median = (r + l)//2
-        c = Node(self.sorted_x_list[median],False,(self.sorted_x_list[l][0],self.sorted_x_list[r][0]))
-        c._left = self.BuildXTree(l,median)
-        c._right = self.BuildXTree(median+1,r)
+        x_list = self.sorted_x_list
+        c = Node(x_list[median],False,(x_list[l][0],x_list[r][0]))
+        c._left, c._right = self.BuildXTree(l,median), self.BuildXTree(median+1,r)
         c._y_sort = self.merge_list(c._left._y_sort, c._right._y_sort)
-        # c.printNode()
         return c
 
     def searchRange(self, range, arr):
-        # Sanity check
-        l,r = range[0],range[1]
-        if(arr[0][1] > r):
-            return (-1,-1)
-        if(arr[len(arr)-1][1] < l):
-            return (-1,-1)
-        
-        # Binary search for l
-        start,end = 0,len(arr) - 1
-        left_limit = -1
+        l,r = range[0],range[1] # Sanity check
+        if(arr[0][1] > r): return (-1,-1)
+        if(arr[len(arr)-1][1] < l): return (-1,-1)
+
+        start, end, left_limit = 0,len(arr) - 1, -1 # Binary search for l
         while (start <= end):
             mid = (start + end) // 2
-    
-            # Move to right side if target is
-            # greater.
-            if (arr[mid][1] < l):
-                start = mid + 1
-    
-            # Move left side.
-            else:
-                left_limit = mid
-                end = mid - 1
+            if (arr[mid][1] < l): start = mid + 1
+            else: left_limit, end = mid, mid - 1
 
-        # Binary search for r
-        start,end = 0,len(arr) - 1
-        right_limit = -1
+        start, end, right_limit = 0,len(arr) - 1, -1 # Binary search for r
         while(start <= end):
             mid = (start + end) // 2
-    
-            # Move to left side if target is
-            # smaller.
-            if (arr[mid][1] > r):
-                end = mid - 1
-    
-            # Move left side.
-            else:
-                right_limit = mid
-                start = mid + 1
+            if (arr[mid][1] > r): end = mid - 1
+            else: right_limit, start = mid, mid + 1
         return (left_limit,right_limit)
 
     def merge_list(self, arr1, arr2):
@@ -100,55 +59,40 @@ class PointDatabase:
         while i < n1 and j < n2:
             if arr1[i][1] < arr2[j][1]:
                 arr3[k] = arr1[i]
-                k = k + 1
-                i = i + 1
+                k, i = k + 1, i + 1
             else:
                 arr3[k] = arr2[j]
-                k = k + 1
-                j = j + 1
+                k, j = k + 1, j + 1
 
         while i < n1:
             arr3[k] = arr1[i]
-            k = k + 1
-            i = i + 1
+            k, i = k + 1, i + 1
 
         while j < n2:
             arr3[k] = arr2[j]
-            k = k + 1
-            j = j + 1
+            k, j = k + 1, j + 1
         return arr3
 
     def searchNearbyHelper(self,rX,rY,ptr: Node):
         if ptr._is_leaf:
             # Guard method to avoid nested if-else
-            if ptr._val[0] < rX[0] or ptr._val[0] > rX[1]:
-                return
-            if ptr._val[1] < rY[0] or ptr._val[1] > rY[1]:
-                return
+            if ptr._val[0] < rX[0] or ptr._val[0] > rX[1]: return
+            if ptr._val[1] < rY[0] or ptr._val[1] > rY[1]: return
             self._answer.append(ptr._val)
             return
-
-        # Completly outside
-        if ptr._x_range[1] < rX[0] or ptr._x_range[0] > rX[1]:
-            return
+        if ptr._x_range[1] < rX[0] or ptr._x_range[0] > rX[1]: return # Completly outside
         
-        # Completly inside
-        if ptr._x_range[0] >= rX[0] and ptr._x_range[1] <= rX[1]:
+        if ptr._x_range[0] >= rX[0] and ptr._x_range[1] <= rX[1]: # Completly inside
             l,r = self.searchRange(rY,ptr._y_sort)
-            for i in range(l,r+1):
-                self._answer.append(ptr._y_sort[i])
+            if l == -1 or r == -1: return
+            for i in range(l,r+1): self._answer.append(ptr._y_sort[i])
             return
 
-        # Intersection 
-        self.searchNearbyHelper(rX,rY,ptr._left)
+        self.searchNearbyHelper(rX,rY,ptr._left) # Intersection
         self.searchNearbyHelper(rX, rY, ptr._right)
         return
 
     def searchNearby(self, q, d):
-        """
-        Return - List of 2 tuples
-        q - a 2 tuple, d - l_inf distance
-        """
         if self._range_tree == None:
             return []
         search_range_x = (q[0]-d, q[0]+d)
@@ -156,7 +100,6 @@ class PointDatabase:
         self._answer = []
         self.searchNearbyHelper(search_range_x,search_range_y,self._range_tree)
         return self._answer
-
 
 if __name__ == '__main__':
     # c = PointDatabase([(1,2),(3,4),(0,2),(4,7),(2,5)])
